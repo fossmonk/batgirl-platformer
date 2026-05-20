@@ -1,0 +1,5 @@
+package.zip
+*.exe
+rc.o
+fonts/
+sprites/
