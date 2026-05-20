@@ -156,14 +156,14 @@ void update_game(float dt) {
     // update velocity with movement
     if (tigrKeyHeld(gscreen, TK_RIGHT) || tigrKeyHeld(gscreen, 'D')) {
         spr_dir = DIR_RIGHT;
-        gspr_type = grun_r;
-        if(!in_jump) gspr = get_next_sframe(dt);
+        if(!in_jump) gspr_type = grun_r;
+        gspr = get_next_sframe(dt);
         spr_sx += 40;
     }
     if (tigrKeyHeld(gscreen, TK_LEFT) || tigrKeyHeld(gscreen, 'A')) {
         spr_dir = DIR_LEFT;
-        gspr_type = grun_l;
-        if(!in_jump) gspr = get_next_sframe(dt);
+        if(!in_jump) gspr_type = grun_l;
+        gspr = get_next_sframe(dt);
         spr_sx -= 40;
     }
     if (tigrKeyDown(gscreen, TK_SPACE)) {
@@ -215,7 +215,7 @@ void update_game(float dt) {
 }
 
 int main() {
-    gscreen = tigrWindow(G_W, G_H, game_title, TIGR_FULLSCREEN);
+    gscreen = tigrWindow(G_W, G_H, game_title, TIGR_AUTO);
     gcanvas = tigrBitmap(gscreen->w, gscreen->h);
 
     if(gscreen == NULL || gcanvas == NULL) {

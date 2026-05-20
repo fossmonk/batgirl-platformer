@@ -1,4 +1,4 @@
-package.zip
+package*.zip
 *.exe
 rc.o
 fonts/
