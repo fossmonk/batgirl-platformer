@@ -237,9 +237,16 @@ int main() {
         update_game(dt);
         tigrBlit(gscreen, gcanvas, 0, 0, 0, 0, gcanvas->w, gcanvas->h);
         tigrBlitAlpha(gscreen, gspr, (int)spr_x, (int)spr_y, 0, 0, gspr->w, gspr->h, 1.0f);
+
+        // put some debug info to the screen
         #if !defined(PACKAGE)
-        tigrPrint(gscreen, titlefont, 1000, 0, tigrRGB(255,0,0), "X: %f, Y: %f, VX: %f, VY: %f\n", spr_x,spr_y,spr_sx,spr_sy);
+        char buf[50] = { 0 };
+        snprintf(buf, 49, "X: %0.1f, Y: %0.1f, VX: %0.1f, VY: %0.1f\n", spr_x,spr_y,spr_sx,spr_sy);
+        int tw = tigrTextWidth(titlefont, buf);
+        tigrPrint(gscreen, titlefont, G_W - tw, 0, tigrRGB(255,0,0), buf);
         #endif
+        
+        // update screen
         tigrUpdate(gscreen);
     }
 
