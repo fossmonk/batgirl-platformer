@@ -1,7 +1,8 @@
 #include "tigr/tigr.h"
 #include "anim.h"
 
-#define MAX_BATRS (10)
+#define MAX_BATRS   (5)
+#define MAX_DRAGONS (2)
 
 /* Player object */
 typedef struct {
@@ -9,9 +10,14 @@ typedef struct {
     float ypos;
     float xvel;
     float yvel;
+
     int jumping;
     int h_dir;
+
+    anim_t *curr_anim;
     Tigr *curr_sprite;
+
+    int health;
 } player_t;
 
 typedef struct {
@@ -20,9 +26,24 @@ typedef struct {
     float ypos;
     float xvel;
     float yvel;
-    anim_t* anim;
+
+    anim_t *curr_anim;
     Tigr *curr_sprite;
 } weapon_t;
+
+typedef struct {
+    int active;
+    float xpos;
+    float ypos;
+    float xvel;
+    float yvel;
+
+    anim_t *curr_anim;
+    Tigr *curr_sprite;
+
+    int health;
+} npc_t;
+
 
 /* Game Object */
 typedef struct {
@@ -33,6 +54,13 @@ typedef struct {
 
     player_t p;
     weapon_t batrs[MAX_BATRS];
+    npc_t dragons[MAX_DRAGONS];
+
+    // handle mouse
+    int mouse_prev_buttons;
+    int mouse_buttons;
+    int mousex;
+    int mousey;
     
 } g_obj;
 
