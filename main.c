@@ -27,17 +27,12 @@ int main() {
     
     while(!tigrClosed(screen)) {
         float dt = tigrTime();
+
+        // update game state and sprites
         game_update(g, dt);
-        tigrBlit(screen, canvas, 0, 0, 0, 0, canvas->w, canvas->h);
-        tigrBlitAlpha(screen, 
-                      g->curr_sprite, 
-                      (int)g->p.xpos, 
-                      (int)g->p.ypos, 
-                      0, 
-                      0, 
-                      g->curr_sprite->w,
-                      g->curr_sprite->h, 
-                      1.0f);
+        
+        // draw updated game canvas to screen
+        game_draw(screen, canvas, g);
 
         // put some debug info to the screen in dev mode
         #ifndef PACKAGE
@@ -48,7 +43,7 @@ int main() {
         tigrUpdate(screen);
     }
 
-    free_game(g);
+    game_free(g);
     tigrFree(canvas);
     tigrFree(screen);
     
