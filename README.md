@@ -10,11 +10,11 @@ and currently supports windows builds only
 
 ## Features to be implemented
 
- - [] Fight animation
-    - [] Hand to hand combat
-    - [] Weapons animation
- - [] Backdrop update
- - [] Bats flying animation
- - [] Enemies
- - [] Scoring system
- - [] More interactibles
+ - [ ] Fight animation
+    - [ ] Hand to hand combat
+    - [ ] Weapons animation
+ - [ ] Backdrop update
+ - [ ] Bats flying animation
+ - [ ] Enemies
+ - [ ] Scoring system
+ - [ ] More interactibles
