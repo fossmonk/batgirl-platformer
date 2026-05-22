@@ -6,7 +6,7 @@
 typedef enum {
     PLAYER = 0,
     NPC    = 1,
-    WEAPON = 2,
+    OBJECT = 2,
 } anim_type;
 
 typedef enum {

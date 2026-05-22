@@ -23,6 +23,5 @@ pkg:
 	@$(RM_RF) $(PACKAGE)
 	@del rc.o
 
-
 clean:
 	@if exist $(APP).exe del $(APP).exe

@@ -1,47 +1,56 @@
 #include "tigr/tigr.h"
 #include "anim.h"
 
-#define MAX_BATRS   (5)
-#define MAX_DRAGONS (2)
+#define MAX_BATRS                       (3)
+#define MAX_DRAGONS                     (2)
+#define MAX_FIREBALLS_PER_DRAGON        (5)
+#define MAX_FIREBALLS                   (MAX_DRAGONS * MAX_FIREBALLS_PER_DRAGON)
 
-/* Player object */
+// Generic object
 typedef struct {
     float xpos;
     float ypos;
     float xvel;
     float yvel;
+    
+    anim_t *curr_anim;
+    Tigr *curr_sprite;
+    
+    int active;
+} obj_t;
 
+// Player object
+typedef struct {
+    float xpos;
+    float ypos;
+    float xvel;
+    float yvel;
+    
+    anim_t *curr_anim;
+    Tigr *curr_sprite;
+
+    int health;
+    int dying;
+    int score;
+    
     int jumping;
     int h_dir;
 
-    anim_t *curr_anim;
-    Tigr *curr_sprite;
-
-    int health;
 } player_t;
 
+// NPC object
 typedef struct {
-    int active;
     float xpos;
     float ypos;
     float xvel;
     float yvel;
-
+    
     anim_t *curr_anim;
     Tigr *curr_sprite;
-} weapon_t;
-
-typedef struct {
+    
     int active;
-    float xpos;
-    float ypos;
-    float xvel;
-    float yvel;
-
-    anim_t *curr_anim;
-    Tigr *curr_sprite;
-
     int health;
+    int dying;
 } npc_t;
 
 
@@ -53,19 +62,23 @@ typedef struct {
     TigrFont *regfont;
 
     player_t p;
-    weapon_t batrs[MAX_BATRS];
+    obj_t batrs[MAX_BATRS];
     npc_t dragons[MAX_DRAGONS];
+    obj_t fireballs[MAX_FIREBALLS];
 
     // handle mouse
     int mouse_prev_buttons;
     int mouse_buttons;
     int mousex;
     int mousey;
-    
-} g_obj;
 
-g_obj* game_init(Tigr* screen, Tigr* canvas);
-void game_update(g_obj *g, float dt);
-void game_debug_dump(g_obj *g);
-void game_draw(Tigr* screen, Tigr* canvas, g_obj *g);
-void game_free(g_obj *g);
+    int game_over;
+    
+} game_t;
+
+game_t* game_init(Tigr* screen, Tigr* canvas);
+void game_update(game_t *g, float dt);
+void game_debug_dump(game_t *g);
+void game_draw(Tigr* screen, Tigr* canvas, game_t *g);
+void game_over_draw(Tigr* screen, Tigr* canvas, game_t *g);
+void game_free(game_t *g);

@@ -23,6 +23,8 @@
 #define MOUSE_RIGHT  (1 << 1)
 #define MOUSE_MIDDLE (1 << 2)
 
+#define game_obj_blit_alpha(obj) do { if((obj)->active) { tigrBlitAlpha(screen,(obj)->curr_sprite,(int)(obj)->xpos,(int)(obj)->ypos,0,0,(obj)->curr_sprite->w,(obj)->curr_sprite->h,1.0f); } } while(0)
+
 #define dbg_print printf("DEBUG HIT in %s:%d@%s\n", __FILE__, __LINE__, __FUNCTION__)
 
 // Declare the different animations for player
@@ -31,6 +33,7 @@ anim_t p_runr;
 anim_t p_runl;
 anim_t p_jumpr;
 anim_t p_jumpl;
+anim_t p_death;
 
 // Declare animation for batarangs
 // Load from file for only one
@@ -40,142 +43,190 @@ anim_t batarang_rotate[MAX_BATRS];
 // Load from file for only one
 anim_t dragon_flyl[MAX_DRAGONS];
 anim_t dragon_flyr[MAX_DRAGONS];
+anim_t dragon_deathl[MAX_DRAGONS];
+anim_t dragon_deathr[MAX_DRAGONS];
 
-void game_update_mouse(g_obj *g) {
+// Declare fireball animation
+anim_t fireball[MAX_FIREBALLS];
+
+void game_update_mouse(game_t *g) {
     g->mouse_prev_buttons = g->mouse_buttons;
     tigrMouse(g->screen, &g->mousex, &g->mousey, &g->mouse_buttons);
 }
 
-g_obj* game_init(Tigr* screen, Tigr* canvas) {
+
+int game_detect_obj_collision_aabb(obj_t* attack, obj_t* attackee) {
+    int collided = 0;
+
+    int s_h = attack->curr_sprite->h;
+    int s_w = attack->curr_sprite->w;
+
+    float xlim = s_w/1.2;
+    float ylim = s_h/1.2;
+
+    float cx1 = attack->xpos + attack->curr_sprite->w/2;
+    float cx2 = attackee->xpos + attackee->curr_sprite->w/2;
+    float cy1 = attack->ypos + attack->curr_sprite->h/2;
+    float cy2 = attackee->ypos + attackee->curr_sprite->h/2;
+
+    if(fabsf(cx2-cx1) < xlim && fabsf(cy2-cy1) < ylim)collided = 1;
+
+    return collided;
+}
+
+game_t* game_init(Tigr* screen, Tigr* canvas) {
     // initialize game object
-    g_obj* g = malloc(sizeof(*g));
+    game_t* g = malloc(sizeof(*g));
     g->screen = screen;
     g->canvas = canvas;
+    g->game_over = 0;
 
     // load fonts
-    font_load_ascii("res/fonts/profont29.png", &g->titlefont);
-    font_load_ascii("res/fonts/profont17.png", &g->regfont);
+    font_load_ascii("res/fonts/spleen64.png", &g->titlefont);
+    font_load_ascii("res/fonts/spleen.png", &g->regfont);
     
     // load sprites
     // player
-    anim_load_sprites_file(&p_idle, "res/sprites/idle/frame_%03d.png", "IDLE", 7, PLAYER, IDLE, 0.07f, 1);
-    anim_load_sprites_file(&p_runr, "res/sprites/runright/frame_%03d.png", "RUN RIGHT", 7, PLAYER, RUN, 0.07f, 1);
-    anim_load_sprites_file(&p_runl, "res/sprites/runleft/frame_%03d.png", "RUN LEFT", 7, PLAYER, RUN, 0.07f, 1);
-    anim_load_sprites_file(&p_jumpr, "res/sprites/jumpright/frame_%03d.png", "JUMP RIGHT", 7, PLAYER, JUMP, 0.07f, 0);
-    anim_load_sprites_file(&p_jumpl, "res/sprites/jumpleft/frame_%03d.png", "JUMP LEFT", 7, PLAYER, JUMP, 0.07f, 0);
+    anim_load_sprites_file(&p_idle, PLAYER_IDLE, "IDLE", 7, PLAYER, IDLE, 0.07f, 1);
+    anim_load_sprites_file(&p_runr, PLAYER_RUNR, "RUN RIGHT", 7, PLAYER, RUN, 0.07f, 1);
+    anim_load_sprites_file(&p_runl, PLAYER_RUNL, "RUN LEFT", 7, PLAYER, RUN, 0.07f, 1);
+    anim_load_sprites_file(&p_jumpr, PLAYER_JUMPR, "JUMP RIGHT", 7, PLAYER, JUMP, 0.07f, 0);
+    anim_load_sprites_file(&p_jumpl, PLAYER_JUMPL, "JUMP LEFT", 7, PLAYER, JUMP, 0.07f, 0);
+    anim_load_sprites_file(&p_death, PLAYER_DEATH, "DEATH", 16, PLAYER, NONE, 0.07f, 0);
 
     // batarang
-    anim_load_sprites_file(&batarang_rotate[0], "res/sprites/batarang_rotate/frame_%03d.png", "BATARANG ROTATE", 8, WEAPON, NONE, 0.06f, 1);
+    anim_load_sprites_file(&batarang_rotate[0], BATARANG_ROT, "BATARANG ROTATE", 8, OBJECT, NONE, 0.06f, 1);
 
     for(int i = 1; i < MAX_BATRS; i++) {
-        anim_load_sprites_mem(&batarang_rotate[i], batarang_rotate[0].frames, "BATARANG ROTATE", 8, WEAPON, NONE, 0.1f, 1);
+        anim_load_sprites_mem(&batarang_rotate[i], batarang_rotate[0].frames, "BATARANG ROTATE", 8, OBJECT, NONE, 0.08f, 1);
     }
 
     // dragon
-    anim_load_sprites_file(&dragon_flyl[0], "res/sprites/dragon_flyl/frame_%03d.png", "DRAGON FLY LEFT", 25, NPC, NONE, 0.1f, 1);
-    anim_load_sprites_file(&dragon_flyr[0], "res/sprites/dragon_flyr/frame_%03d.png", "DRAGON FLY RIGHT", 25, NPC, NONE, 0.1f, 1);
+    anim_load_sprites_file(&dragon_flyl[0], DRAGON_FLYL, "DRAGON FLY LEFT", 25, NPC, NONE, 0.1f, 1);
+    anim_load_sprites_file(&dragon_flyr[0], DRAGON_FLYR, "DRAGON FLY RIGHT", 25, NPC, NONE, 0.1f, 1);
+    anim_load_sprites_file(&dragon_deathl[0], DRAGON_DEATHL, "DRAGON DEATH LEFT", 9, NPC, NONE, 0.07f, 0);
+    anim_load_sprites_file(&dragon_deathr[0], DRAGON_DEATHR, "DRAGON DEATH RIGHT", 9, NPC, NONE, 0.07f, 0);
     for(int i = 1; i < MAX_DRAGONS; i++) {
         anim_load_sprites_mem(&dragon_flyl[i], dragon_flyl[0].frames, "DRAGON FLY LEFT", 25, NPC, NONE, 0.1f, 1);
         anim_load_sprites_mem(&dragon_flyr[i], dragon_flyr[0].frames, "DRAGON FLY RIGHT", 25, NPC, NONE, 0.1f, 1);
+        anim_load_sprites_mem(&dragon_deathl[i], dragon_deathl[0].frames, "DRAGON DEATH LEFT", 9, NPC, NONE, 0.07f, 0);
+        anim_load_sprites_mem(&dragon_deathr[i], dragon_deathr[0].frames, "DRAGON DEATH RIGHT", 9, NPC, NONE, 0.07f, 0);
+    }
+
+    // fireball
+    anim_load_sprites_file(&fireball[0], FIREBALL, "FIREBALL", 4, OBJECT, NONE, 0.01f, 1);
+    for(int i = 1; i < MAX_FIREBALLS; i++) {
+        anim_load_sprites_mem(&fireball[i], fireball[0].frames, "FIREBALL", 4, OBJECT, NONE, 0.01f, 1);
     }
 
     // init current player animation and starting sprite
     g->p.curr_anim = &p_idle;
     g->p.curr_sprite = g->p.curr_anim->frames[0];
     g->p.xpos = 0;
-    g->p.ypos = g->screen->h - g->p.curr_sprite->h;
+    g->p.ypos = GAME_GROUND_Y - g->p.curr_sprite->h;
     g->p.xvel = 0;
     g->p.yvel = 0;
     g->p.health = 100;
+    g->p.dying = 0;
+    g->p.score = 0;
 
     // mark all batarangs as inactive and map the animations
     for(int i = 0; i < MAX_BATRS; i++) {
         g->batrs[i].active = 0;
-        g->batrs[i].curr_anim   = &batarang_rotate[i];
+        g->batrs[i].curr_anim = &batarang_rotate[i];
     }
 
-    // mark all dragons inactive and init other attributes
+    // mark all dragons inactive and map animations
     for(int i = 0; i < MAX_DRAGONS; i++) {
         g->dragons[i].active = 0;
+        g->dragons[i].dying = 0;
         g->dragons[i].curr_anim = &dragon_flyl[i];
+    }
+
+    // mark all fireballs inactive and map animations
+    for(int i = 0; i < MAX_FIREBALLS; i++) {
+        g->fireballs[i].active = 0;
+        g->fireballs[i].curr_anim = &fireball[i];
     }
     
     // init_backdrop
     tigrClear(g->canvas, BAT_BLUE1);
-    Tigr *bg_image = tigrLoadImage("res/background.png");
+    Tigr *bg_image = tigrLoadImage(BACKDROP);
     if(bg_image) {
         tigrBlit(g->canvas, bg_image, 0,0,0,0, bg_image->w, bg_image->h);
         tigrFree(bg_image);
     }
     
     int tw = tigrTextWidth(g->titlefont, G_TITLE);
-    tigrPrint(g->canvas, g->titlefont, (G_W-tw)/2, 0, BAT_BLUE3, G_TITLE);
+    tigrPrint(g->canvas, g->titlefont, (G_W-tw)/2, 0, BAT_WHITE, G_TITLE);
 
     return g;
 }
 
-void game_update(g_obj *g, float dt) {
+void game_update(game_t *g, float dt) {
     if(dt > 0.1f)dt = 0.1f;
 
     // handle inputs
     // update velocity with movement
-    if (tigrKeyHeld(g->screen, TK_RIGHT) || tigrKeyHeld(g->screen, 'D')) {
-        g->p.h_dir = DIR_RIGHT;
-        if(!g->p.jumping) g->p.curr_anim = &p_runr;
-        anim_advance_frame(g->p.curr_anim, dt);
-        g->p.curr_sprite = g->p.curr_anim->frames[g->p.curr_anim->currframe];
-        g->p.xvel += 40;
-    }
-    if (tigrKeyHeld(g->screen, TK_LEFT) || tigrKeyHeld(g->screen, 'A')) {
-        g->p.h_dir = DIR_LEFT;
-        if(!g->p.jumping) g->p.curr_anim = &p_runl;
-        anim_advance_frame(g->p.curr_anim, dt);
-        g->p.curr_sprite = g->p.curr_anim->frames[g->p.curr_anim->currframe];
-        g->p.xvel -= 40;
-    }
-    if (tigrKeyDown(g->screen, TK_SPACE)) {
-        if(!g->p.jumping) {
-            g->p.jumping = 1;
-            g->p.yvel -= 700;
-            if(g->p.h_dir == DIR_LEFT) {
-                g->p.curr_anim = &p_jumpl;
-            } else {
-                g->p.curr_anim = &p_jumpr;
-            }
-            g->p.curr_anim->currframe = 0;
+    if(!g->p.dying) {
+        if (tigrKeyHeld(g->screen, TK_RIGHT) || tigrKeyHeld(g->screen, 'D')) {
+            g->p.h_dir = DIR_RIGHT;
+            if(!g->p.jumping) g->p.curr_anim = &p_runr;
+            anim_advance_frame(g->p.curr_anim, dt);
+            g->p.curr_sprite = g->p.curr_anim->frames[g->p.curr_anim->currframe];
+            g->p.xvel += 40;
         }
-    }
-
-    game_update_mouse(g);
-    if((g->mouse_buttons & MOUSE_LEFT) && !(g->mouse_prev_buttons & MOUSE_LEFT)) {
-        // click detected
-        // check for an empty slot in batarangs array
-        // assign to one, init position as player's hdir corner
-        weapon_t *w = NULL;
-        for(int i = 0; i < MAX_BATRS; i++) {
-            if(!g->batrs[i].active) {
-                w = &g->batrs[i];
-                break;
+        if (tigrKeyHeld(g->screen, TK_LEFT) || tigrKeyHeld(g->screen, 'A')) {
+            g->p.h_dir = DIR_LEFT;
+            if(!g->p.jumping) g->p.curr_anim = &p_runl;
+            anim_advance_frame(g->p.curr_anim, dt);
+            g->p.curr_sprite = g->p.curr_anim->frames[g->p.curr_anim->currframe];
+            g->p.xvel -= 40;
+        }
+        if (tigrKeyDown(g->screen, TK_SPACE)) {
+            if(!g->p.jumping) {
+                g->p.jumping = 1;
+                g->p.yvel -= 700;
+                if(g->p.h_dir == DIR_LEFT) {
+                    g->p.curr_anim = &p_jumpl;
+                } else {
+                    g->p.curr_anim = &p_jumpr;
+                }
+                g->p.curr_anim->currframe = 0;
             }
         }
-        if(w) {
-            w->active = 1;
-            w->curr_sprite = w->curr_anim->frames[0];
-            // xpos is middle, ypos is little above middle of player
-            // since this is a projectile, treat as point. Find center coordinates
-            float delta = 70.0;
-            w->xpos = (g->p.xpos + g->p.curr_sprite->w/2) - (w->curr_sprite->w/2);
-            w->ypos = (g->p.ypos + g->p.curr_sprite->h/2 - delta) - (w->curr_sprite->h/2);
-            
-            // calculate velocity angle from mousex, mousey
-            float dx = (float)(g->mousex - w->xpos);
-            float dy = (float)(g->mousey - w->ypos);
-            float d  = sqrt(dx*dx + dy*dy);
-            if(d == 0.0f)d = 1.0f;
-            float sintheta = dy/d;
-            float costheta = dx/d;
-            w->xvel = 500.0 * costheta;
-            w->yvel = 500.0 * sintheta;
+    
+        game_update_mouse(g);
+        if((g->mouse_buttons & MOUSE_LEFT) && !(g->mouse_prev_buttons & MOUSE_LEFT)) {
+            // click detected
+            // check for an empty slot in batarangs array
+            // assign to one, init position as player's hdir corner
+            obj_t *w = NULL;
+            for(int i = 0; i < MAX_BATRS; i++) {
+                if(!g->batrs[i].active) {
+                    w = &g->batrs[i];
+                    break;
+                }
+            }
+            if(w) {
+                w->active = 1;
+                w->curr_sprite = w->curr_anim->frames[0];
+                // xpos is middle, ypos is little above middle of player
+                // since this is a projectile, treat as point. Find center coordinates
+                float delta = 70.0;
+                w->xpos = (g->p.xpos + g->p.curr_sprite->w/2) - (w->curr_sprite->w/2);
+                w->ypos = (g->p.ypos + g->p.curr_sprite->h/2 - delta) - (w->curr_sprite->h/2);
+                
+                // calculate velocity angle from mousex, mousey
+                float dx = (float)(g->mousex - w->xpos);
+                float dy = (float)(g->mousey - w->ypos);
+                float d  = sqrt(dx*dx + dy*dy);
+                if(d == 0.0f)d = 1.0f;
+                float sintheta = dy/d;
+                float costheta = dx/d;
+                w->xvel = 500.0 * costheta;
+                w->yvel = 500.0 * sintheta;
+            }
         }
     }
 
@@ -192,20 +243,35 @@ void game_update(g_obj *g, float dt) {
         }
         if(d) {
             d->active = 1;
+            d->dying = 0;
+            d->curr_anim = &dragon_flyl[d_yoff];
             d->curr_sprite = d->curr_anim->frames[0];
             // start at right end of screen
             d->xpos = g->screen->w - d->curr_sprite->w;
             // depending on your index, start at a height offset
-            d->ypos = d_yoff * d->curr_sprite->h + 10;
+            d->ypos = d_yoff * d->curr_sprite->h;
             d->xvel = -300;
             d->yvel = 0; // no vertical movement
         }
     }
 
-
     /////////////////////////////
     //    PLAYER UPDATES       //
     ////////////////////////////
+    // check for player death
+    if(g->p.dying) {
+        if(g->p.curr_anim != &p_death) {
+            g->p.curr_anim = &p_death;
+            g->p.curr_anim->currframe = 0;
+        } else {
+            if (g->p.curr_anim->currframe == g->p.curr_anim->framecount - 1) {
+                g->game_over = 1;
+            }
+        }
+        anim_advance_frame(g->p.curr_anim, dt);
+        g->p.curr_sprite = g->p.curr_anim->frames[g->p.curr_anim->currframe];
+    }
+
     // decay velocities after updation
     g->p.xvel *= expf(-20*dt);
     g->p.yvel *= expf(-2*dt);
@@ -222,20 +288,20 @@ void game_update(g_obj *g, float dt) {
     g->p.xpos = _min(g->p.xpos, g->screen->w - g->p.curr_sprite->w);
     // limit y position
     g->p.ypos = _max(g->p.ypos, 0);
-    g->p.ypos = _min(g->p.ypos, g->screen->h - g->p.curr_sprite->h);
+    g->p.ypos = _min(g->p.ypos, GAME_GROUND_Y - g->p.curr_sprite->h);
 
     if(g->p.jumping && (g->p.curr_anim->action == JUMP)) {
         anim_advance_frame(g->p.curr_anim, dt);
         g->p.curr_sprite = g->p.curr_anim->frames[g->p.curr_anim->currframe];
     }
 
-    if((int)g->p.ypos == (g->screen->h - g->p.curr_sprite->h)) {
+    if((int)g->p.ypos == (GAME_GROUND_Y - g->p.curr_sprite->h)) {
         g->p.jumping = 0;
     }
 
     // if sprite x velocity is 0, 
     // if sprite y pos is ground, switch to idle
-    if(((int)g->p.xvel == 0) && !g->p.jumping) {
+    if(((int)g->p.xvel == 0) && !g->p.jumping && !g->p.dying) {
         g->p.curr_anim = &p_idle;
         anim_advance_frame(g->p.curr_anim, dt);
         g->p.curr_sprite = g->p.curr_anim->frames[g->p.curr_anim->currframe];
@@ -247,7 +313,7 @@ void game_update(g_obj *g, float dt) {
     // cycle through all batarangs, update the position and advance the frame
     // if curr position is beyond canvas limits, mark it as inactive
     for(int i = 0; i < MAX_BATRS; i++) {
-        weapon_t *w = &g->batrs[i];
+        obj_t *w = &g->batrs[i];
         if(w->active) {
             // check curr positions
             if((w->xpos < 0) || (w->ypos < 0) || (w->xpos > g->canvas->w) || (w->ypos > g->canvas->h)) {
@@ -273,26 +339,114 @@ void game_update(g_obj *g, float dt) {
     for(int i = 0; i < MAX_DRAGONS; i++) {
         npc_t *d = &g->dragons[i];
         if(d->active) {
-            // check curr positions, only need for x
-            if((d->xpos < 0) || (d->xpos + d->curr_sprite->w > g->canvas->w)) {
-                d->xvel = -d->xvel;
+            // check for dying 
+            if(d->dying) {
+                // start death animation if not already
                 if(d->curr_anim == &dragon_flyl[i]) {
-                    d->curr_anim = &dragon_flyr[i];
+                    d->curr_anim = &dragon_deathl[i];
+                    d->curr_anim->currframe = 0;
+                } else if (d->curr_anim == &dragon_flyr[i]) {
+                    d->curr_anim = &dragon_deathr[i];
+                    d->curr_anim->currframe = 0;
                 } else {
-                    d->curr_anim = &dragon_flyl[i];
+                    // already in dying animation
+                    // check for last frame
+                    if(d->curr_anim->currframe == d->curr_anim->framecount - 1) {
+                        d->active = 0;
+                    }
+                }
+            } else {
+                // check curr positions, only need for x
+                if((d->xpos < 0) || (d->xpos + d->curr_sprite->w > g->canvas->w)) {
+                    d->xvel = -d->xvel;
+                    if(d->curr_anim == &dragon_flyl[i]) {
+                        d->curr_anim = &dragon_flyr[i];
+                    } else {
+                        d->curr_anim = &dragon_flyl[i];
+                    }
+                }
+                // update x positions with velocity
+                d->xpos += d->xvel * dt;
+    
+                // randomly drop a fireball if conditions are met
+                // => free slot in fireball array
+                if(rand() % 678 == 0) {
+                    obj_t *fb = NULL;
+                    for(int j = 0; j < MAX_FIREBALLS_PER_DRAGON; j++) {
+                        if(!g->fireballs[MAX_FIREBALLS_PER_DRAGON*i + j].active) {
+                            fb = &g->fireballs[MAX_FIREBALLS_PER_DRAGON*i + j];
+                            break;
+                        }
+                    }
+                    if(fb) {
+                        fb->active = 1;
+                        fb->curr_sprite = fb->curr_anim->frames[0];
+                        // drop from dragon's xcenter, ycenter + delta
+                        fb->xpos = d->xpos + d->curr_sprite->w/2;
+                        fb->ypos = d->ypos + d->curr_sprite->h/2 + 30.0;
+                        // it's a drop, so no xvel, only yvel = g*dt
+                        fb->xvel = 0;
+                        fb->yvel = 400*dt;
+                    }
                 }
             }
-            // update x positions with velocity
-            d->xpos += d->xvel * dt;
 
             // advance frame
             anim_advance_frame(d->curr_anim, dt);
             d->curr_sprite = d->curr_anim->frames[d->curr_anim->currframe];
         }
     }
+
+    // cycle through fireballs and update position and velocity of actives
+    for(int i = 0; i < MAX_FIREBALLS; i++) {
+        obj_t *fb = &g->fireballs[i];
+        if(fb) {
+            // check for ypos exceeding ground height
+            if(fb->ypos > GAME_GROUND_Y) {
+                fb->active = 0;
+            } else {
+                // update yvel and ypos
+                fb->yvel += 400 * dt;
+                fb->ypos += fb->yvel * dt;
+
+                // advance frame
+                anim_advance_frame(fb->curr_anim, dt);
+                fb->curr_sprite = fb->curr_anim->frames[fb->curr_anim->currframe];
+            }
+        }
+    }
+
+    ////////COLLISION DETECTION/////////////
+    // check for batarang collision with dragons
+    for(int i = 0; i < MAX_DRAGONS; i++) {
+        npc_t *dragon = &g->dragons[i];
+        if(dragon->active) {
+            for(int j = 0; j < MAX_BATRS; j++) {
+                obj_t *batr = &g->batrs[j];
+                if(batr->active) {
+                    if(game_detect_obj_collision_aabb((obj_t *)&g->batrs[j], (obj_t *)dragon)) {
+                        dragon->dying = 1;
+                        batr->active = 0;
+                        g->p.score += 10;
+                    }
+                }
+            }
+        }
+    }
+
+    // check for fireball collision with player
+    for(int i = 0; i < MAX_FIREBALLS; i++) {
+        obj_t *fb = &g->fireballs[i];
+        if(fb->active) {
+            if(game_detect_obj_collision_aabb(fb, (obj_t *)&g->p)) {
+                g->p.dying = 1;
+                fb->active = 0;
+            }
+        }
+    }
 }
 
-void game_draw(Tigr* screen, Tigr* canvas, g_obj *g) {
+void game_draw(Tigr* screen, Tigr* canvas, game_t *g) {
     // draw canvas to screen
     tigrBlit(screen, canvas, 0, 0, 0, 0, canvas->w, canvas->h);
 
@@ -308,37 +462,50 @@ void game_draw(Tigr* screen, Tigr* canvas, g_obj *g) {
                       1.0f);
     // draw all active batarangs
     for(int i = 0; i < MAX_BATRS; i++) {
-        weapon_t *w = &g->batrs[i];
-        if(w->active) {
-            tigrBlitAlpha(screen, 
-                      w->curr_sprite, 
-                      (int)w->xpos, 
-                      (int)w->ypos, 
-                      0, 
-                      0, 
-                      w->curr_sprite->w,
-                      w->curr_sprite->h,
-                      1.0f);
-        }
+        obj_t *w = &g->batrs[i];
+        game_obj_blit_alpha(w);
     }
     // draw all active dragons
     for(int i = 0; i < MAX_DRAGONS; i++) {
         npc_t *d = &g->dragons[i];
-        if(d->active) {
-            tigrBlitAlpha(screen, 
-                      d->curr_sprite, 
-                      (int)d->xpos, 
-                      (int)d->ypos, 
-                      0, 
-                      0, 
-                      d->curr_sprite->w,
-                      d->curr_sprite->h,
-                      1.0f);
-        }
+        game_obj_blit_alpha(d);
     }
+    // draw all active fireballs
+    for(int i = 0; i < MAX_FIREBALLS; i++) {
+        obj_t *fb = &g->fireballs[i];
+        game_obj_blit_alpha(fb);
+    }
+
+    // draw score to top left
+    tigrPrint(screen, g->regfont, 0, 0, tigrRGB(0, 255, 0), "Your Score: %d", g->p.score);
 }
 
-void game_debug_dump(g_obj *g) {
+void game_over_draw(Tigr* screen, Tigr* canvas, game_t *g) {
+    // draw canvas to screen
+    tigrBlit(screen, canvas, 0, 0, 0, 0, canvas->w, canvas->h);
+
+    // draw all active dragons
+    for(int i = 0; i < MAX_DRAGONS; i++) {
+        npc_t *d = &g->dragons[i];
+        game_obj_blit_alpha(d);
+    }
+
+    // blit game over image
+    Tigr *gameoverimage = tigrLoadImage("res/gameover.png");
+    int w = gameoverimage->w;
+    int h = gameoverimage->h;
+    tigrBlitAlpha(screen, gameoverimage, (screen->w - w)/2, (screen->h - h)/2, 0, 0, w, h, 1.0f);
+
+    // Score
+    char buf[50] = { 0 };
+    snprintf(buf, 49, "Your Score: %d", g->p.score);
+    int tw = tigrTextWidth(g->titlefont, buf);
+    int tx = (screen->w-tw)/2;
+    int ty = (screen->h + h)/2 + 10;
+    tigrPrint(screen, g->titlefont, tx, ty, tigrRGB(0, 255, 0), "Your Score: %d", g->p.score);
+}
+
+void game_debug_dump(game_t *g) {
     char buf[50] = { 0 };
     int tw = 0;
     int th = 0;
@@ -371,7 +538,7 @@ void game_debug_dump(g_obj *g) {
     memset(buf, 0, sizeof(char));
 }
 
-void game_free(g_obj *g) {
+void game_free(game_t *g) {
     anim_free(&p_idle);
     anim_free(&p_runr);
     anim_free(&p_runl);

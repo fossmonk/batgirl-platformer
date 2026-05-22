@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -31,11 +32,17 @@ void anim_load_sprites_file(anim_t *anim,
     anim->frames = malloc(sizeof(Tigr *) * anim->framecount);
 
     char buf[100] = { 0 };
+    int image_load_fail = 0;
     for(int i = 0; i < anim->framecount; i++) {
         snprintf(buf, 99, filenamepattern, i+1);
         anim->frames[i] = tigrLoadImage(buf);
+        if(!anim->frames[i]) {
+            image_load_fail = 1;
+            break;
+        }
         memset(buf, 0, sizeof(char));
     }
+    assert(!image_load_fail);
 }
 
 void anim_load_sprites_mem(anim_t *anim, 
@@ -46,6 +53,7 @@ void anim_load_sprites_mem(anim_t *anim,
                        anim_action action,
                        float duration,
                        int repeat) {
+    assert(frames != NULL);
     anim->framecount = count;
     anim->currframe  = 0;
     anim->name       = name;
