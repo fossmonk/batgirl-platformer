@@ -13,6 +13,11 @@ all:
 	@cc $(SRCS) rc.o $(CFLAGS) $(LFLAGS) -o $(APP) && $(APP).exe
 	@del rc.o
 
+debug:
+	@$(RC) res/resource.rc -O coff -o rc.o
+	@cc $(SRCS) rc.o $(CFLAGS) -DDEBUG $(LFLAGS) -o $(APP) && $(APP).exe
+	@del rc.o
+
 pkg:
 	@if exist $(PACKAGE).zip del $(PACKAGE).zip
 	@mkdir $(PACKAGE)

@@ -11,7 +11,7 @@
 
 int main() {
     srand(time(NULL));
-    Tigr* screen = tigrWindow(G_W, G_H, G_TITLE, TIGR_FIXED);
+    Tigr* screen = tigrWindow(G_W, G_H, G_TITLE, GAME_WIN_MODE);
     Tigr *canvas = tigrBitmap(screen->w, screen->h);
 
     if(screen == NULL || screen == NULL) {
@@ -26,6 +26,8 @@ int main() {
     game_t *g = game_init(screen, canvas);
 
     tigrSetPostFX(screen, 1, 1, 1, 1.1f);
+
+    game_start_wait(screen, g);
     
     while(!tigrClosed(screen)) {
         float dt = tigrTime();
@@ -41,7 +43,7 @@ int main() {
         }
 
         // put some debug info to the screen in dev mode
-        #ifndef PACKAGE
+        #ifdef DEBUG
         game_debug_dump(g);
         #endif
         

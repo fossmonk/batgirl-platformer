@@ -1,10 +1,6 @@
 #include "tigr/tigr.h"
+#include "config.h"
 #include "anim.h"
-
-#define MAX_BATRS                       (3)
-#define MAX_DRAGONS                     (2)
-#define MAX_FIREBALLS_PER_DRAGON        (5)
-#define MAX_FIREBALLS                   (MAX_DRAGONS * MAX_FIREBALLS_PER_DRAGON)
 
 // Generic object
 typedef struct {
@@ -58,13 +54,15 @@ typedef struct {
 typedef struct {
     Tigr *canvas;
     Tigr *screen;
-    TigrFont *titlefont;
-    TigrFont *regfont;
+    TigrFont *h1font;
+    TigrFont *h2font;
+    TigrFont *textfont;
 
     player_t p;
     obj_t batrs[MAX_BATRS];
     npc_t dragons[MAX_DRAGONS];
     obj_t fireballs[MAX_FIREBALLS];
+    npc_t spiky[MAX_SPIKY];
 
     // handle mouse
     int mouse_prev_buttons;
@@ -76,6 +74,7 @@ typedef struct {
     
 } game_t;
 
+void game_start_wait(Tigr* s, game_t *g);
 game_t* game_init(Tigr* screen, Tigr* canvas);
 void game_update(game_t *g, float dt);
 void game_debug_dump(game_t *g);

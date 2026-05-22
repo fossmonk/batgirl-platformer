@@ -49,11 +49,14 @@ anim_t dragon_deathr[MAX_DRAGONS];
 // Declare fireball animation
 anim_t fireball[MAX_FIREBALLS];
 
+// Declare spiky animation
+anim_t spiky[MAX_SPIKY];
+anim_t spiky_death[MAX_SPIKY];
+
 void game_update_mouse(game_t *g) {
     g->mouse_prev_buttons = g->mouse_buttons;
     tigrMouse(g->screen, &g->mousex, &g->mousey, &g->mouse_buttons);
 }
-
 
 int game_detect_obj_collision_aabb(obj_t* attack, obj_t* attackee) {
     int collided = 0;
@@ -82,8 +85,9 @@ game_t* game_init(Tigr* screen, Tigr* canvas) {
     g->game_over = 0;
 
     // load fonts
-    font_load_ascii("res/fonts/spleen64.png", &g->titlefont);
-    font_load_ascii("res/fonts/spleen.png", &g->regfont);
+    font_load_ascii(H1_FONT, &g->h1font);
+    font_load_ascii(H2_FONT, &g->h2font);
+    font_load_ascii(TEXT_FONT, &g->textfont);
     
     // load sprites
     // player
@@ -97,7 +101,7 @@ game_t* game_init(Tigr* screen, Tigr* canvas) {
     // batarang
     anim_load_sprites_file(&batarang_rotate[0], BATARANG_ROT, "BATARANG ROTATE", 8, OBJECT, NONE, 0.06f, 1);
 
-    for(int i = 1; i < MAX_BATRS; i++) {
+    for(int i = 1; i < MAX_BATRS; ++i) {
         anim_load_sprites_mem(&batarang_rotate[i], batarang_rotate[0].frames, "BATARANG ROTATE", 8, OBJECT, NONE, 0.08f, 1);
     }
 
@@ -106,7 +110,7 @@ game_t* game_init(Tigr* screen, Tigr* canvas) {
     anim_load_sprites_file(&dragon_flyr[0], DRAGON_FLYR, "DRAGON FLY RIGHT", 25, NPC, NONE, 0.1f, 1);
     anim_load_sprites_file(&dragon_deathl[0], DRAGON_DEATHL, "DRAGON DEATH LEFT", 9, NPC, NONE, 0.07f, 0);
     anim_load_sprites_file(&dragon_deathr[0], DRAGON_DEATHR, "DRAGON DEATH RIGHT", 9, NPC, NONE, 0.07f, 0);
-    for(int i = 1; i < MAX_DRAGONS; i++) {
+    for(int i = 1; i < MAX_DRAGONS; ++i) {
         anim_load_sprites_mem(&dragon_flyl[i], dragon_flyl[0].frames, "DRAGON FLY LEFT", 25, NPC, NONE, 0.1f, 1);
         anim_load_sprites_mem(&dragon_flyr[i], dragon_flyr[0].frames, "DRAGON FLY RIGHT", 25, NPC, NONE, 0.1f, 1);
         anim_load_sprites_mem(&dragon_deathl[i], dragon_deathl[0].frames, "DRAGON DEATH LEFT", 9, NPC, NONE, 0.07f, 0);
@@ -115,14 +119,22 @@ game_t* game_init(Tigr* screen, Tigr* canvas) {
 
     // fireball
     anim_load_sprites_file(&fireball[0], FIREBALL, "FIREBALL", 4, OBJECT, NONE, 0.01f, 1);
-    for(int i = 1; i < MAX_FIREBALLS; i++) {
+    for(int i = 1; i < MAX_FIREBALLS; ++i) {
         anim_load_sprites_mem(&fireball[i], fireball[0].frames, "FIREBALL", 4, OBJECT, NONE, 0.01f, 1);
+    }
+
+    // spiky
+    anim_load_sprites_file(&spiky[0], SPIKY, "SPIKY", 8, NPC, NONE, 0.1f, 1);
+    anim_load_sprites_file(&spiky_death[0], SPIKY_DEATH, "SPIKY DEATH", 7, NPC, NONE, 0.04f, 0);
+    for(int i = 1; i < MAX_SPIKY; ++i) {
+        anim_load_sprites_mem(&spiky[i], spiky[0].frames, "SPIKY", 8, NPC, NONE, 0.1f, 1);
+        anim_load_sprites_mem(&spiky_death[i], spiky_death[0].frames, "SPIKY DEATH", 7, NPC, NONE, 0.04f, 0);
     }
 
     // init current player animation and starting sprite
     g->p.curr_anim = &p_idle;
     g->p.curr_sprite = g->p.curr_anim->frames[0];
-    g->p.xpos = 0;
+    g->p.xpos = (g->screen->w - g->p.curr_sprite->w)/2;
     g->p.ypos = GAME_GROUND_Y - g->p.curr_sprite->h;
     g->p.xvel = 0;
     g->p.yvel = 0;
@@ -131,24 +143,31 @@ game_t* game_init(Tigr* screen, Tigr* canvas) {
     g->p.score = 0;
 
     // mark all batarangs as inactive and map the animations
-    for(int i = 0; i < MAX_BATRS; i++) {
+    for(int i = 0; i < MAX_BATRS; ++i) {
         g->batrs[i].active = 0;
         g->batrs[i].curr_anim = &batarang_rotate[i];
     }
 
     // mark all dragons inactive and map animations
-    for(int i = 0; i < MAX_DRAGONS; i++) {
+    for(int i = 0; i < MAX_DRAGONS; ++i) {
         g->dragons[i].active = 0;
         g->dragons[i].dying = 0;
         g->dragons[i].curr_anim = &dragon_flyl[i];
     }
 
     // mark all fireballs inactive and map animations
-    for(int i = 0; i < MAX_FIREBALLS; i++) {
+    for(int i = 0; i < MAX_FIREBALLS; ++i) {
         g->fireballs[i].active = 0;
         g->fireballs[i].curr_anim = &fireball[i];
     }
-    
+
+    // mark all spiky inactive and map animations
+    for(int i = 0; i < MAX_SPIKY; ++i) {
+        g->spiky[i].active = 0;
+        g->spiky[i].dying = 0;
+        g->spiky[i].curr_anim = &spiky[i];
+    }
+
     // init_backdrop
     tigrClear(g->canvas, BAT_BLUE1);
     Tigr *bg_image = tigrLoadImage(BACKDROP);
@@ -157,11 +176,58 @@ game_t* game_init(Tigr* screen, Tigr* canvas) {
         tigrFree(bg_image);
     }
     
-    int tw = tigrTextWidth(g->titlefont, G_TITLE);
-    tigrPrint(g->canvas, g->titlefont, (G_W-tw)/2, 0, BAT_WHITE, G_TITLE);
+    int tw = tigrTextWidth(g->h1font, G_TITLE);
+    tigrPrint(g->canvas, g->h1font, (G_W-tw)/2, 0, BAT_WHITE, G_TITLE);
 
     return g;
 }
+
+void game_start_wait(Tigr* s, game_t *g) {
+    char *p2s = "PRESS <SPACE> TO START THE GAME";
+    char *controls[5] = {
+        "    CONTROLS   ",
+        "---------------",
+        "<A>/<D> to move",
+        "<SPACE> to jump",
+        "<CLICK> to throw"
+    };
+    
+    int tw, th, tx, ty = s->h/2 - 100;
+    int spacing = 15;
+    TigrFont *font = g->h2font;
+
+    tw = tigrTextWidth(g->h1font, G_TITLE);
+    th = tigrTextHeight(g->h1font, G_TITLE);
+    tx = s->w/2 - tw/2;
+    ty = ty + th/2;
+    tigrPrint(s, g->h1font, tx, ty, BAT_WHITE, G_TITLE);
+    ty += th/2 + spacing;
+    tigrPrint(s, g->h1font, tx, ty, BAT_WHITE, " ");
+
+    for(int i = 0; i < 5; i++) {
+        tw = tigrTextWidth(font, controls[i]);
+        th = tigrTextHeight(font, controls[i]);
+        tx = s->w/2 - tw/2;
+        ty += th/2 + spacing;
+        tigrPrint(s, font, tx, ty, BAT_WHITE, controls[i]);
+    }
+
+    tw = tigrTextWidth(font, p2s);
+    th = tigrTextHeight(font, p2s);
+    tx = s->w/2 - tw/2;
+    ty += th/2 + 2*spacing;
+    tigrPrint(s, font, tx, ty, BAT_WHITE, p2s);
+
+    int start = 0;
+
+    while(!start) {
+        if(tigrKeyDown(s, TK_SPACE)) {
+            start = 1;
+        }
+        tigrUpdate(s);
+    }
+}
+
 
 void game_update(game_t *g, float dt) {
     if(dt > 0.1f)dt = 0.1f;
@@ -202,7 +268,7 @@ void game_update(game_t *g, float dt) {
             // check for an empty slot in batarangs array
             // assign to one, init position as player's hdir corner
             obj_t *w = NULL;
-            for(int i = 0; i < MAX_BATRS; i++) {
+            for(int i = 0; i < MAX_BATRS; ++i) {
                 if(!g->batrs[i].active) {
                     w = &g->batrs[i];
                     break;
@@ -234,7 +300,7 @@ void game_update(game_t *g, float dt) {
     if(rand() % 233 == 0) {
         npc_t *d = NULL;
         int d_yoff = 0;
-        for(int i = 0; i < MAX_DRAGONS; i++) {
+        for(int i = 0; i < MAX_DRAGONS; ++i) {
             if(!g->dragons[i].active) {
                 d = &g->dragons[i];
                 d_yoff = i;
@@ -252,6 +318,38 @@ void game_update(game_t *g, float dt) {
             d->ypos = d_yoff * d->curr_sprite->h;
             d->xvel = -300;
             d->yvel = 0; // no vertical movement
+        }
+    }
+
+    // randomly initialize a spiky if there is an empty slot
+    if(rand() % 379 == 0) {
+        npc_t *spk = NULL;
+        int idx = 0;
+        for(int i = 0; i < MAX_SPIKY; ++i) {
+            if(!g->spiky[i].active) {
+                spk = &g->spiky[i];
+                idx = i;
+                break;
+            }
+        }
+        if(spk) {
+            spk->active = 1;
+            spk->dying = 0;
+            spk->curr_anim = &spiky[idx];
+            spk->curr_sprite = spk->curr_anim->frames[0];
+            if(rand() % 7 == 0) {
+                // start from right
+                spk->xpos = g->screen->w - spk->curr_sprite->w;
+                spk->ypos = GAME_GROUND_Y - spk->curr_sprite->w;
+                spk->xvel = -400;
+                spk->yvel = 0;
+            } else {
+                // start from left
+                spk->xpos = 0;
+                spk->ypos = GAME_GROUND_Y - spk->curr_sprite->w;
+                spk->xvel = 400;
+                spk->yvel = 0;
+            }
         }
     }
 
@@ -298,7 +396,6 @@ void game_update(game_t *g, float dt) {
     if((int)g->p.ypos == (GAME_GROUND_Y - g->p.curr_sprite->h)) {
         g->p.jumping = 0;
     }
-
     // if sprite x velocity is 0, 
     // if sprite y pos is ground, switch to idle
     if(((int)g->p.xvel == 0) && !g->p.jumping && !g->p.dying) {
@@ -312,7 +409,7 @@ void game_update(game_t *g, float dt) {
     ///////////////////////////////
     // cycle through all batarangs, update the position and advance the frame
     // if curr position is beyond canvas limits, mark it as inactive
-    for(int i = 0; i < MAX_BATRS; i++) {
+    for(int i = 0; i < MAX_BATRS; ++i) {
         obj_t *w = &g->batrs[i];
         if(w->active) {
             // check curr positions
@@ -330,13 +427,12 @@ void game_update(game_t *g, float dt) {
             }
         }
     }
-
     ////////////////////////////////
     //    DRAGONS UPDATE          //
     ///////////////////////////////
     // cycle through active dragons, update the position and advance frame
     // if curr position is beyond canvas limits, reverse x vel
-    for(int i = 0; i < MAX_DRAGONS; i++) {
+    for(int i = 0; i < MAX_DRAGONS; ++i) {
         npc_t *d = &g->dragons[i];
         if(d->active) {
             // check for dying 
@@ -372,7 +468,7 @@ void game_update(game_t *g, float dt) {
                 // => free slot in fireball array
                 if(rand() % 678 == 0) {
                     obj_t *fb = NULL;
-                    for(int j = 0; j < MAX_FIREBALLS_PER_DRAGON; j++) {
+                    for(int j = 0; j < MAX_FIREBALLS_PER_DRAGON; ++j) {
                         if(!g->fireballs[MAX_FIREBALLS_PER_DRAGON*i + j].active) {
                             fb = &g->fireballs[MAX_FIREBALLS_PER_DRAGON*i + j];
                             break;
@@ -397,8 +493,11 @@ void game_update(game_t *g, float dt) {
         }
     }
 
+    ////////////////////////////////
+    //     FIREBALL UPDATE        //
+    ///////////////////////////////
     // cycle through fireballs and update position and velocity of actives
-    for(int i = 0; i < MAX_FIREBALLS; i++) {
+    for(int i = 0; i < MAX_FIREBALLS; ++i) {
         obj_t *fb = &g->fireballs[i];
         if(fb) {
             // check for ypos exceeding ground height
@@ -416,12 +515,46 @@ void game_update(game_t *g, float dt) {
         }
     }
 
+    ////////////////////////////////
+    //      SPIKY UPDATE          //
+    ///////////////////////////////
+    // cycle throught spikys and update position and velocity of actives
+    for(int i = 0; i < MAX_SPIKY; ++i) {
+        npc_t *spk = &g->spiky[i];
+        if(spk->active) {
+            if(spk->dying) {
+                // start death animation if not already
+                if(spk->curr_anim != &spiky_death[i]) {
+                    spk->curr_anim = &spiky_death[i];
+                    spk->curr_anim->currframe = 0;
+                } else {
+                    // already in dying animation
+                    // check for last frame
+                    if(spk->curr_anim->currframe == spk->curr_anim->framecount - 1) {
+                        spk->active = 0;
+                    }
+                }
+            } else {
+                if(spk->xpos < 0 || spk->xpos > g->screen->w) {
+                    spk->active = 0;
+                } else {
+                    // update xpos
+                    spk->xpos += spk->xvel * dt;
+    
+                }
+            }
+            // advance frame
+            anim_advance_frame(spk->curr_anim, dt);
+            spk->curr_sprite = spk->curr_anim->frames[spk->curr_anim->currframe];
+        }
+    }
+
     ////////COLLISION DETECTION/////////////
     // check for batarang collision with dragons
-    for(int i = 0; i < MAX_DRAGONS; i++) {
+    for(int i = 0; i < MAX_DRAGONS; ++i) {
         npc_t *dragon = &g->dragons[i];
         if(dragon->active) {
-            for(int j = 0; j < MAX_BATRS; j++) {
+            for(int j = 0; j < MAX_BATRS; ++j) {
                 obj_t *batr = &g->batrs[j];
                 if(batr->active) {
                     if(game_detect_obj_collision_aabb((obj_t *)&g->batrs[j], (obj_t *)dragon)) {
@@ -435,12 +568,37 @@ void game_update(game_t *g, float dt) {
     }
 
     // check for fireball collision with player
-    for(int i = 0; i < MAX_FIREBALLS; i++) {
+    for(int i = 0; i < MAX_FIREBALLS; ++i) {
         obj_t *fb = &g->fireballs[i];
         if(fb->active) {
             if(game_detect_obj_collision_aabb(fb, (obj_t *)&g->p)) {
                 g->p.dying = 1;
                 fb->active = 0;
+            }
+        }
+    }
+
+    // check for spiky collision with player
+    for(int i = 0; i < MAX_SPIKY; ++i) {
+        npc_t *spk = &g->spiky[i];
+        if(spk->active && !spk->dying) {
+            if(game_detect_obj_collision_aabb((obj_t *)spk, (obj_t *)&g->p)) {
+                g->p.dying = 1;
+            }
+        }
+    }
+
+    // check for spiky collision with each other
+    // C(n,r)
+    for(int i = 0; i < MAX_SPIKY; ++i) {
+        for(int j = i + 1; j < MAX_SPIKY; ++j) {
+            npc_t *spk0 = &g->spiky[i];
+            npc_t *spk1 = &g->spiky[j];
+            if(spk0->active && !spk0->dying && spk1->active && !spk1->dying) {
+                if(game_detect_obj_collision_aabb((obj_t *)spk0, (obj_t *)spk1)) {
+                    spk0->dying = 1;
+                    spk1->dying = 1;
+                }
             }
         }
     }
@@ -461,23 +619,28 @@ void game_draw(Tigr* screen, Tigr* canvas, game_t *g) {
                       g->p.curr_sprite->h, 
                       1.0f);
     // draw all active batarangs
-    for(int i = 0; i < MAX_BATRS; i++) {
+    for(int i = 0; i < MAX_BATRS; ++i) {
         obj_t *w = &g->batrs[i];
         game_obj_blit_alpha(w);
     }
     // draw all active dragons
-    for(int i = 0; i < MAX_DRAGONS; i++) {
+    for(int i = 0; i < MAX_DRAGONS; ++i) {
         npc_t *d = &g->dragons[i];
         game_obj_blit_alpha(d);
     }
     // draw all active fireballs
-    for(int i = 0; i < MAX_FIREBALLS; i++) {
+    for(int i = 0; i < MAX_FIREBALLS; ++i) {
         obj_t *fb = &g->fireballs[i];
         game_obj_blit_alpha(fb);
     }
+    // draw all active spiky
+    for(int i = 0; i < MAX_SPIKY; ++i) {
+        npc_t *spk = &g->spiky[i];
+        game_obj_blit_alpha(spk);
+    }
 
     // draw score to top left
-    tigrPrint(screen, g->regfont, 0, 0, tigrRGB(0, 255, 0), "Your Score: %d", g->p.score);
+    tigrPrint(screen, g->textfont, 0, 0, tigrRGB(0, 255, 0), "Your Score: %d", g->p.score);
 }
 
 void game_over_draw(Tigr* screen, Tigr* canvas, game_t *g) {
@@ -485,24 +648,32 @@ void game_over_draw(Tigr* screen, Tigr* canvas, game_t *g) {
     tigrBlit(screen, canvas, 0, 0, 0, 0, canvas->w, canvas->h);
 
     // draw all active dragons
-    for(int i = 0; i < MAX_DRAGONS; i++) {
+    for(int i = 0; i < MAX_DRAGONS; ++i) {
         npc_t *d = &g->dragons[i];
         game_obj_blit_alpha(d);
     }
 
-    // blit game over image
+    // blit "gameover" image
     Tigr *gameoverimage = tigrLoadImage("res/gameover.png");
-    int w = gameoverimage->w;
-    int h = gameoverimage->h;
-    tigrBlitAlpha(screen, gameoverimage, (screen->w - w)/2, (screen->h - h)/2, 0, 0, w, h, 1.0f);
+    int gw = gameoverimage->w;
+    int gh = gameoverimage->h;
+    tigrBlitAlpha(screen, gameoverimage, (screen->w - gw)/2, (screen->h - gh)/2, 0, 0, gw, gh, 1.0f);
+
+    // blit the scroll below
+    Tigr *scrollim = tigrLoadImage("res/scroll.png");
+    int sw = scrollim->w;
+    int sh = scrollim->h;
+    int sx = (screen->w - sw)/2;
+    int sy = gh + (screen->h - sh)/2;
+    tigrBlitAlpha(screen, scrollim, sx, sy, 0, 0, sw, sh, 1.0f);
 
     // Score
     char buf[50] = { 0 };
     snprintf(buf, 49, "Your Score: %d", g->p.score);
-    int tw = tigrTextWidth(g->titlefont, buf);
+    int tw = tigrTextWidth(g->h2font, buf);
     int tx = (screen->w-tw)/2;
-    int ty = (screen->h + h)/2 + 10;
-    tigrPrint(screen, g->titlefont, tx, ty, tigrRGB(0, 255, 0), "Your Score: %d", g->p.score);
+    int ty = sy + sh/2;
+    tigrPrint(screen, g->h2font, tx, ty, tigrRGB(255, 255, 255), "Your Score: %d", g->p.score);
 }
 
 void game_debug_dump(game_t *g) {
@@ -514,27 +685,27 @@ void game_debug_dump(game_t *g) {
     // position and velocity
     snprintf(buf, 49, "X: %0.1f, Y: %0.1f, VX: %0.1f, VY: %0.1f\n", 
         g->p.xpos, g->p.ypos, g->p.xvel, g->p.yvel);
-    tw = tigrTextWidth(g->regfont, buf);
-    tigrPrint(g->screen, g->regfont, g->screen->w - tw, th + gap, BAT_WHITE, buf);
-    th += tigrTextHeight(g->regfont, buf);
+    tw = tigrTextWidth(g->textfont, buf);
+    tigrPrint(g->screen, g->textfont, g->screen->w - tw, th + gap, BAT_WHITE, buf);
+    th += tigrTextHeight(g->textfont, buf);
     memset(buf, 0, sizeof(char));
 
     // player current animation
     snprintf(buf, 49, "Current Player Animation: %s\n", g->p.curr_anim->name);
-    tw = tigrTextWidth(g->regfont, buf);
-    tigrPrint(g->screen, g->regfont, g->screen->w - tw, th + gap, BAT_WHITE, buf);
-    th += tigrTextHeight(g->regfont, buf);
+    tw = tigrTextWidth(g->textfont, buf);
+    tigrPrint(g->screen, g->textfont, g->screen->w - tw, th + gap, BAT_WHITE, buf);
+    th += tigrTextHeight(g->textfont, buf);
     memset(buf, 0, sizeof(char));
 
     // number of active batarangs
     int count = 0;
-    for(int i = 0; i < MAX_BATRS; i++) {
+    for(int i = 0; i < MAX_BATRS; ++i) {
         if(g->batrs[i].active)count++;
     }
     snprintf(buf, 49, "Active Batarangs: %d\n", count);
-    tw = tigrTextWidth(g->regfont, buf);
-    tigrPrint(g->screen, g->regfont, g->screen->w - tw, th + gap, BAT_WHITE, buf);
-    th += tigrTextHeight(g->regfont, buf);
+    tw = tigrTextWidth(g->textfont, buf);
+    tigrPrint(g->screen, g->textfont, g->screen->w - tw, th + gap, BAT_WHITE, buf);
+    th += tigrTextHeight(g->textfont, buf);
     memset(buf, 0, sizeof(char));
 }
 
