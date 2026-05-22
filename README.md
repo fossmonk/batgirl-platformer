@@ -8,13 +8,16 @@ and currently supports windows builds only
 
 ![](./demo/demo.gif)
 
-## Features to be implemented
+## Features implemented
 
- - [ ] Fight animation
-    - [ ] Hand to hand combat
-    - [ ] Weapons animation
- - [ ] Backdrop update
- - [ ] Bats flying animation
- - [ ] Enemies
- - [ ] Scoring system
- - [ ] More interactibles
+ - [x] Weapons animation - batarang
+ - [x] Backdrop update
+ - [x] Bats flying animation
+ - [x] Enemies
+ - [x] Scoring system
+ - [x] More interactibles
+ - [x] Dragons
+ - [x] Splash screen
+ - [x] Game over screen
+
+ ## Features to be implemented
