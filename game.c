@@ -228,9 +228,9 @@ void game_start_wait(Tigr* s, game_t *g) {
     }
 }
 
-
 void game_update(game_t *g, float dt) {
     if(dt > 0.1f)dt = 0.1f;
+    float h_accel = 5000.0f;
 
     // handle inputs
     // update velocity with movement
@@ -240,14 +240,14 @@ void game_update(game_t *g, float dt) {
             if(!g->p.jumping) g->p.curr_anim = &p_runr;
             anim_advance_frame(g->p.curr_anim, dt);
             g->p.curr_sprite = g->p.curr_anim->frames[g->p.curr_anim->currframe];
-            g->p.xvel += 40;
+            g->p.xvel += h_accel*dt;
         }
         if (tigrKeyHeld(g->screen, TK_LEFT) || tigrKeyHeld(g->screen, 'A')) {
             g->p.h_dir = DIR_LEFT;
             if(!g->p.jumping) g->p.curr_anim = &p_runl;
             anim_advance_frame(g->p.curr_anim, dt);
             g->p.curr_sprite = g->p.curr_anim->frames[g->p.curr_anim->currframe];
-            g->p.xvel -= 40;
+            g->p.xvel -= h_accel*dt;
         }
         if (tigrKeyDown(g->screen, TK_SPACE)) {
             if(!g->p.jumping) {
