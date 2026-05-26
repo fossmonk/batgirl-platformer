@@ -16,10 +16,11 @@
 /* Game Res */
 #define G_W            (1280)
 #define G_H            (720)
-#define GAME_GROUND_Y  (674)
+#define GAME_GROUND_Y  (670)
 
 /* Game Sprites */
 #define BACKDROP            "res/background.png"
+#define INTRO_ANIM          "res/sprites/intro_anim/frame_%03d.png"
 #define BATARANG_ROT        "res/sprites/batarang_rotate/frame_%03d.png"
 #define DRAGON_FLYL         "res/sprites/dragon_flyl/frame_%03d.png"
 #define DRAGON_FLYR         "res/sprites/dragon_flyr/frame_%03d.png"
@@ -46,9 +47,10 @@
 /* Game Sounds */
 #define SOUND_THEME         "res/sounds/theme.wav"
 #define SOUND_JUMP          "res/sounds/jump.wav"
-#define SOUND_BATARANG      "res/sounds/batarang.wav"
-#define SOUND_EXPLOSION     "res/sounds/explosion.wav"
+#define SOUND_BATARANG      "res/sounds/shoot.wav"
+#define SOUND_EXPLOSION     "res/sounds/ammachi.wav"
 #define SOUND_BURN          "res/sounds/burn.wav"
+#define SOUND_INTRO         "res/sounds/atombomb.wav"
 
 /* Game Config */
 #define MAX_BATRS                       (3)

@@ -77,13 +77,13 @@ typedef struct {
     int mousey;
 
     int game_over;
+    int game_wclosed;
     
 } game_t;
 
-void game_start_wait(Tigr* s, game_t *g);
 game_t* game_init(Tigr* screen, Tigr* canvas);
-void game_update(game_t *g, float dt);
-void game_debug_dump(game_t *g);
-void game_draw(Tigr* screen, Tigr* canvas, game_t *g);
-void game_over_draw(Tigr* screen, Tigr* canvas, game_t *g);
+void game_start_wait(Tigr* s, game_t *g);
+void game_intro_loop(Tigr* s, game_t *g);
+void game_main_loop(Tigr* s, Tigr* c, game_t* g);
+void game_over_loop(Tigr* s, Tigr* c, game_t *g);
 void game_free(game_t *g);

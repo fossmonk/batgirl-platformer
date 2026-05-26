@@ -1,9 +1,9 @@
 LLVM_MINGW_PATH=tools\llvm-mingw\bin
 CFLAGS= -Wall -D__USE_MINGW_ANSI_STDIO=1 -O2
-LFLAGS= -lopengl32 -lgdi32 -lm
+LFLAGS= -lopengl32 -lgdi32 -lm -lwinmm
 PACKAGE=package
 APP=batg
-SRCS=main.c winmagic.c game.c font.c anim.c sound.c tigr/tigr.c
+SRCS=main.c winmagic.c game.c font.c anim.c tiny_audio.c tigr/tigr.c
 RM_RF=rmdir /s /q
 PKGFLAGS=-DPACKAGE=1 -mwindows
 CC=$(LLVM_MINGW_PATH)\cc
