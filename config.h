@@ -19,26 +19,36 @@
 #define GAME_GROUND_Y  (674)
 
 /* Game Sprites */
-#define BACKDROP       "res/background.png"
-#define BATARANG_ROT   "res/sprites/batarang_rotate/frame_%03d.png"
-#define DRAGON_FLYL    "res/sprites/dragon_flyl/frame_%03d.png"
-#define DRAGON_FLYR    "res/sprites/dragon_flyr/frame_%03d.png"
-#define DRAGON_DEATHL  "res/sprites/dragon_deathl/frame_%03d.png"
-#define DRAGON_DEATHR  "res/sprites/dragon_deathr/frame_%03d.png"
-#define FIREBALL       "res/sprites/fireball/frame_%03d.png"
-#define SPIKY          "res/sprites/spiky/frame_%03d.png"
-#define SPIKY_DEATH    "res/sprites/spiky_death/frame_%03d.png"
-#define PLAYER_IDLE    "res/sprites/idle/frame_%03d.png"
-#define PLAYER_RUNR    "res/sprites/runright/frame_%03d.png"
-#define PLAYER_RUNL    "res/sprites/runleft/frame_%03d.png"
-#define PLAYER_JUMPR   "res/sprites/jumpright/frame_%03d.png"
-#define PLAYER_JUMPL   "res/sprites/jumpleft/frame_%03d.png"
-#define PLAYER_DEATH   "res/sprites/playerdeath/frame_%03d.png"
+#define BACKDROP            "res/background.png"
+#define BATARANG_ROT        "res/sprites/batarang_rotate/frame_%03d.png"
+#define DRAGON_FLYL         "res/sprites/dragon_flyl/frame_%03d.png"
+#define DRAGON_FLYR         "res/sprites/dragon_flyr/frame_%03d.png"
+#define DRAGON_DEATHL       "res/sprites/dragon_deathl/frame_%03d.png"
+#define DRAGON_DEATHR       "res/sprites/dragon_deathr/frame_%03d.png"
+#define FIREBALL            "res/sprites/fireball/frame_%03d.png"
+#define SPIKY               "res/sprites/spiky/frame_%03d.png"
+#define SPIKY_DEATH         "res/sprites/spiky_death/frame_%03d.png"
+#define PLAYER_IDLE         "res/sprites/idle/frame_%03d.png"
+#define PLAYER_RUNR         "res/sprites/runright/frame_%03d.png"
+#define PLAYER_RUNL         "res/sprites/runleft/frame_%03d.png"
+#define PLAYER_JUMPR        "res/sprites/jumpright/frame_%03d.png"
+#define PLAYER_JUMPL        "res/sprites/jumpleft/frame_%03d.png"
+#define PLAYER_DEATH_BURNL  "res/sprites/pdeath_burnl/frame_%03d.png"
+#define PLAYER_DEATH_HITL   "res/sprites/pdeath_hitl/frame_%03d.png"
+#define PLAYER_DEATH_BURNR  "res/sprites/pdeath_burnr/frame_%03d.png"
+#define PLAYER_DEATH_HITR   "res/sprites/pdeath_hitr/frame_%03d.png"
 
 /* Game Fonts */
-#define H1_FONT        "res/fonts/go3v2_30.png"
-#define H2_FONT        "res/fonts/roboto.png"
-#define TEXT_FONT      "res/fonts/profont17.png"
+#define H1_FONT             "res/fonts/go3v2_30.png"
+#define H2_FONT             "res/fonts/roboto.png"
+#define TEXT_FONT           "res/fonts/profont17.png"
+
+/* Game Sounds */
+#define SOUND_THEME         "res/sounds/theme.wav"
+#define SOUND_JUMP          "res/sounds/jump.wav"
+#define SOUND_BATARANG      "res/sounds/batarang.wav"
+#define SOUND_EXPLOSION     "res/sounds/explosion.wav"
+#define SOUND_BURN          "res/sounds/burn.wav"
 
 /* Game Config */
 #define MAX_BATRS                       (3)

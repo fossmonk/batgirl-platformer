@@ -2,6 +2,11 @@
 #include "config.h"
 #include "anim.h"
 
+typedef enum {
+    BURN = 0,
+    HIT = 1,
+} deathtype_t;
+
 // Generic object
 typedef struct {
     float xpos;
@@ -27,6 +32,7 @@ typedef struct {
 
     int health;
     int dying;
+    deathtype_t dtype;
     int score;
     
     int jumping;

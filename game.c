@@ -7,6 +7,7 @@
 #include "config.h"
 #include "font.h"
 #include "game.h"
+#include "sound.h"
 #include "tigr/tigr.h"
 
 #ifndef _min
@@ -33,7 +34,18 @@ anim_t p_runr;
 anim_t p_runl;
 anim_t p_jumpr;
 anim_t p_jumpl;
-anim_t p_death;
+anim_t p_deathburnl;
+anim_t p_deathhitl;
+anim_t p_deathburnr;
+anim_t p_deathhitr;
+
+// Declare different game sounds
+sound_t theme;
+sound_t jump;
+sound_t batarang[MAX_BATRS];
+sound_t player_burn;
+sound_t player_hit;
+sound_t dragon_burn[MAX_DRAGONS];
 
 // Declare animation for batarangs
 // Load from file for only one
@@ -77,12 +89,36 @@ int game_detect_obj_collision_aabb(obj_t* attack, obj_t* attackee) {
     return collided;
 }
 
+anim_t * game_get_player_death_type(game_t *g) {
+    if(g->p.h_dir == DIR_LEFT) {
+        if(g->p.dtype == BURN) {
+            return &p_deathburnl;
+        } else {
+            return &p_deathhitl;
+        }
+    } else {
+        if(g->p.dtype == BURN) {
+            return &p_deathburnr;
+        } else {
+            return &p_deathhitr;
+        }
+    }
+}
+
 game_t* game_init(Tigr* screen, Tigr* canvas) {
     // initialize game object
     game_t* g = malloc(sizeof(*g));
     g->screen = screen;
     g->canvas = canvas;
     g->game_over = 0;
+
+    // init sound engine and load sounds
+    sound_init();
+    sound_load(&theme, SOUND_THEME);
+    sound_load(&jump, SOUND_JUMP);
+    sound_load(&player_burn, SOUND_BURN);
+    sound_load_copies(dragon_burn, SOUND_EXPLOSION, MAX_DRAGONS);
+    sound_load_copies(batarang, SOUND_BATARANG, MAX_BATRS);
 
     // load fonts
     font_load_ascii(H1_FONT, &g->h1font);
@@ -96,7 +132,10 @@ game_t* game_init(Tigr* screen, Tigr* canvas) {
     anim_load_sprites_file(&p_runl, PLAYER_RUNL, "RUN LEFT", 7, PLAYER, RUN, 0.07f, 1);
     anim_load_sprites_file(&p_jumpr, PLAYER_JUMPR, "JUMP RIGHT", 7, PLAYER, JUMP, 0.07f, 0);
     anim_load_sprites_file(&p_jumpl, PLAYER_JUMPL, "JUMP LEFT", 7, PLAYER, JUMP, 0.07f, 0);
-    anim_load_sprites_file(&p_death, PLAYER_DEATH, "DEATH", 16, PLAYER, NONE, 0.07f, 0);
+    anim_load_sprites_file(&p_deathburnl, PLAYER_DEATH_BURNL, "DEATH", 16, PLAYER, DEATH, 0.07f, 0);
+    anim_load_sprites_file(&p_deathhitl, PLAYER_DEATH_HITL, "DEATH", 16, PLAYER, DEATH, 0.07f, 0);
+    anim_load_sprites_file(&p_deathburnr, PLAYER_DEATH_BURNR, "DEATH", 16, PLAYER, DEATH, 0.07f, 0);
+    anim_load_sprites_file(&p_deathhitr, PLAYER_DEATH_HITR, "DEATH", 16, PLAYER, DEATH, 0.07f, 0);
 
     // batarang
     anim_load_sprites_file(&batarang_rotate[0], BATARANG_ROT, "BATARANG ROTATE", 8, OBJECT, NONE, 0.06f, 1);
@@ -108,13 +147,13 @@ game_t* game_init(Tigr* screen, Tigr* canvas) {
     // dragon
     anim_load_sprites_file(&dragon_flyl[0], DRAGON_FLYL, "DRAGON FLY LEFT", 25, NPC, NONE, 0.1f, 1);
     anim_load_sprites_file(&dragon_flyr[0], DRAGON_FLYR, "DRAGON FLY RIGHT", 25, NPC, NONE, 0.1f, 1);
-    anim_load_sprites_file(&dragon_deathl[0], DRAGON_DEATHL, "DRAGON DEATH LEFT", 9, NPC, NONE, 0.07f, 0);
-    anim_load_sprites_file(&dragon_deathr[0], DRAGON_DEATHR, "DRAGON DEATH RIGHT", 9, NPC, NONE, 0.07f, 0);
+    anim_load_sprites_file(&dragon_deathl[0], DRAGON_DEATHL, "DRAGON DEATH LEFT", 9, NPC, DEATH, 0.07f, 0);
+    anim_load_sprites_file(&dragon_deathr[0], DRAGON_DEATHR, "DRAGON DEATH RIGHT", 9, NPC, DEATH, 0.07f, 0);
     for(int i = 1; i < MAX_DRAGONS; ++i) {
         anim_load_sprites_mem(&dragon_flyl[i], dragon_flyl[0].frames, "DRAGON FLY LEFT", 25, NPC, NONE, 0.1f, 1);
         anim_load_sprites_mem(&dragon_flyr[i], dragon_flyr[0].frames, "DRAGON FLY RIGHT", 25, NPC, NONE, 0.1f, 1);
-        anim_load_sprites_mem(&dragon_deathl[i], dragon_deathl[0].frames, "DRAGON DEATH LEFT", 9, NPC, NONE, 0.07f, 0);
-        anim_load_sprites_mem(&dragon_deathr[i], dragon_deathr[0].frames, "DRAGON DEATH RIGHT", 9, NPC, NONE, 0.07f, 0);
+        anim_load_sprites_mem(&dragon_deathl[i], dragon_deathl[0].frames, "DRAGON DEATH LEFT", 9, NPC, DEATH, 0.07f, 0);
+        anim_load_sprites_mem(&dragon_deathr[i], dragon_deathr[0].frames, "DRAGON DEATH RIGHT", 9, NPC, DEATH, 0.07f, 0);
     }
 
     // fireball
@@ -223,6 +262,8 @@ void game_start_wait(Tigr* s, game_t *g) {
     while(!start) {
         if(tigrKeyDown(s, TK_SPACE)) {
             start = 1;
+            // start playing the theme
+            sound_play(&theme, 1);
         }
         tigrUpdate(s);
     }
@@ -259,6 +300,7 @@ void game_update(game_t *g, float dt) {
                     g->p.curr_anim = &p_jumpr;
                 }
                 g->p.curr_anim->currframe = 0;
+                sound_play(&jump, 0);
             }
         }
     
@@ -268,9 +310,11 @@ void game_update(game_t *g, float dt) {
             // check for an empty slot in batarangs array
             // assign to one, init position as player's hdir corner
             obj_t *w = NULL;
+            int b_index = 0;
             for(int i = 0; i < MAX_BATRS; ++i) {
                 if(!g->batrs[i].active) {
                     w = &g->batrs[i];
+                    b_index = i;
                     break;
                 }
             }
@@ -292,6 +336,7 @@ void game_update(game_t *g, float dt) {
                 float costheta = dx/d;
                 w->xvel = 500.0 * costheta;
                 w->yvel = 500.0 * sintheta;
+                sound_play(&batarang[b_index], 0);
             }
         }
     }
@@ -358,8 +403,8 @@ void game_update(game_t *g, float dt) {
     ////////////////////////////
     // check for player death
     if(g->p.dying) {
-        if(g->p.curr_anim != &p_death) {
-            g->p.curr_anim = &p_death;
+        if(g->p.curr_anim->action != DEATH) {
+            g->p.curr_anim = game_get_player_death_type(g);
             g->p.curr_anim->currframe = 0;
         } else {
             if (g->p.curr_anim->currframe == g->p.curr_anim->framecount - 1) {
@@ -561,6 +606,7 @@ void game_update(game_t *g, float dt) {
                         dragon->dying = 1;
                         batr->active = 0;
                         g->p.score += 10;
+                        sound_play(&dragon_burn[i], 0);
                     }
                 }
             }
@@ -573,7 +619,9 @@ void game_update(game_t *g, float dt) {
         if(fb->active) {
             if(game_detect_obj_collision_aabb(fb, (obj_t *)&g->p)) {
                 g->p.dying = 1;
+                g->p.dtype = BURN;
                 fb->active = 0;
+                sound_play(&player_burn, 0);
             }
         }
     }
@@ -581,9 +629,11 @@ void game_update(game_t *g, float dt) {
     // check for spiky collision with player
     for(int i = 0; i < MAX_SPIKY; ++i) {
         npc_t *spk = &g->spiky[i];
-        if(spk->active && !spk->dying) {
+        if(spk->active && !spk->dying && !g->p.dying) {
             if(game_detect_obj_collision_aabb((obj_t *)spk, (obj_t *)&g->p)) {
                 g->p.dying = 1;
+                g->p.dtype = HIT;
+                sound_play(&player_burn, 0);
             }
         }
     }

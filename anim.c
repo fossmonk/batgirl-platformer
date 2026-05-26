@@ -42,6 +42,9 @@ void anim_load_sprites_file(anim_t *anim,
         }
         memset(buf, 0, sizeof(char));
     }
+    if(image_load_fail) {
+        printf("Failed to load %s\n",filenamepattern);
+    }
     assert(!image_load_fail);
 }
 

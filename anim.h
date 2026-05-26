@@ -15,7 +15,8 @@ typedef enum {
     JUMP     = 2,
     ATTACK   = 3,
     INTERACT = 4,
-    NONE     = 5,
+    DEATH    = 5,
+    NONE     = 6,
 } anim_action;
 
 typedef struct {
