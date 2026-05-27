@@ -833,6 +833,8 @@ void game_main_loop(Tigr* s, Tigr* c, game_t* g) {
 }
 
 void game_over_loop(Tigr* s, Tigr* c, game_t *g) {
+    // stop theme song
+    ta_sound_stop(&theme);
     while(!g->game_wclosed) {
         g->game_wclosed = tigrClosed(s);
 
